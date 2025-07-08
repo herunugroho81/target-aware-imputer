@@ -7,7 +7,7 @@ class TargetAwareImputer:
     def __init__(self, df, target_column):
         self.df = df.copy()
         self.target_column = target_column
-        self.imputation_values = {}
+        self.imputation_values = {}  # Menyimpan nilai imputasi per kelas per kolom
 
     def detect_missing(self):
         total_missing = self.df.isnull().sum()
@@ -20,10 +20,11 @@ class TargetAwareImputer:
     def auto_impute_by_target(self):
         for col in self.df.columns:
             if col == self.target_column:
-                continue
+                continue  # Tidak perlu imputasi untuk kolom target
 
             if self.df[col].isnull().any():
                 if pd.api.types.is_numeric_dtype(self.df[col]):
+                    # Hitung median per kelas target
                     impute_values = self.df.groupby(self.target_column)[col].transform('median')
                     self.df[col] = self.df[col].fillna(impute_values)
                     self.imputation_values[col] = dict(
@@ -31,6 +32,7 @@ class TargetAwareImputer:
                     )
 
                 elif pd.api.types.is_categorical_dtype(self.df[col]) or self.df[col].dtype == 'object':
+                    # Hitung mode per kelas target
                     mode_dict = {}
                     for cls in self.df[self.target_column].unique():
                         subset = self.df[self.df[self.target_column] == cls]
@@ -40,17 +42,20 @@ class TargetAwareImputer:
                     self.imputation_values[col] = mode_dict
 
                 else:
+                    # Default fallback
                     self.df[col] = self.df[col].fillna("Unknown")
 
         return self.df
 
 
+# 🔧 Fungsi bantu untuk unduh file CSV
 def to_csv(df):
     output = BytesIO()
     df.to_csv(output, index=False)
     return output.getvalue()
 
 
+# 🖥️ UI Streamlit
 st.set_page_config(page_title="Target-Aware Imputer", layout="wide")
 st.title("🛠️ Aplikasi Imputasi Data Berdasarkan Kolom Target")
 st.markdown("Unggah file CSV, pilih kolom target, dan aplikasi akan mengisi nilai kosong berdasarkan kelas.")
